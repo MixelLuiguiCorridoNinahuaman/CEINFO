@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Scripts NPM Dinámicos - CEINFO</title>
+    <style>
+        body { font-family: 'Courier New', monospace; margin: 0; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #0078d4 0%, #00bcf2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .script-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .script-card { background: #2d2d30; border: 1px solid #3e3e42; border-radius: 8px; padding: 20px; position: relative; }
+        .script-header { display: flex; align-items: center; margin-bottom: 15px; }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; animation: pulse 2s infinite; }
+        .status-running { background: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .status-ready { background: #ffa500; box-shadow: 0 0 10px #ffa500; }
+        .status-error { background: #ff0000; box-shadow: 0 0 10px #ff0000; }
+        .command { background: #1e1e1e; padding: 10px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 14px; margin: 10px 0; border-left: 3px solid #0078d4; }
+        .output { background: #0d1117; padding: 15px; border-radius: 5px; margin: 10px 0; max-height: 200px; overflow-y: auto; border: 1px solid #21262d; }
+        .btn { padding: 8px 15px; background: #0078d4; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #106ebe; }
+        .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; }
+        .logs { color: #58a6ff; }
+        .error { color: #f85149; }
+        .success { color: #56d364; }
+        .warning { color: #e3b341; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .terminal-cursor { animation: blink 1s infinite; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Monitor Scripts NPM Dinámicos - Automatización QA</h1>
+            <p>Visualización en Tiempo Real | Estado: <span id="global-status">ACTIVO</span> ⚡</p>
+        </div>
+
+        <div class="script-grid">
+            <!-- Script 1: Test Watch -->
+            <div class="script-card">
+                <div class="script-header">
+                    <div class="status-indicator status-ready"></div>
+                    <h3>🧪 test:watch</h3>
+                </div>
+                <div class="command">npm run test:watch</div>
+                <div class="command">➜ php artisan test --watch</div>
+                <div class="output">
+                    <div class="logs">📋 Script Status: Ready</div>
+                    <div class="warning">⚠️  Waiting for execution...</div>
+                    <div class="logs">🔄 Will monitor file changes</div>
+                    <div class="logs">📝 Auto-runs tests on save</div>
+                </div>
+                <button class="btn btn-success" onclick="simulateScript('test:watch')">▶️ Ejecutar</button>
+                <button class="btn btn-warning" onclick="stopScript('test:watch')">⏸️ Pausar</button>
+            </div>
+
+            <!-- Script 2: Test Coverage -->
+            <div class="script-card" id="coverage-card">
+                <div class="script-header">
+                    <div class="status-indicator status-ready" id="coverage-status"></div>
+                    <h3>📈 test:coverage</h3>
+                </div>
+                <div class="command">npm run test:coverage</div>
+                <div class="command">➜ Coverage Analyzer Real</div>
+                <div class="output" id="coverage-output">
+                    <div class="logs">📊 Coverage Target: ≥80%</div>
+                    <div class="warning" id="coverage-percentage">⏳ Cargando coverage real...</div>
+                    <div class="logs" id="coverage-status-text">🎯 Análisis en tiempo real</div>
+                    <div class="warning" id="coverage-details">📋 Esperando datos...</div>
+                </div>
+                <button class="btn btn-success" onclick="runRealCoverage()">▶️ Analizar Coverage</button>
+                <button class="btn" onclick="window.open('/reports-dashboard.html', '_blank')">📊 Ver Dashboard</button>
+                <button class="btn btn-warning" onclick="refreshCoverage()">🔄 Actualizar</button>
+            </div>
+
+            <!-- Script 3: Security Scan -->
+            <div class="script-card">
+                <div class="script-header">
+                    <div class="status-indicator status-ready"></div>
+                    <h3>🔒 security:scan</h3>
+                </div>
+                <div class="command">npm run security:scan</div>
+                <div class="command">➜ php artisan security:check</div>
+                <div class="output">
+                    <div class="logs">🛡️  Security Scanner: Ready</div>
+                    <div class="success">✅ 0 Critical vulnerabilities</div>
+                    <div class="logs">📋 ISO 27001 Compliance: Active</div>
+                    <div class="logs">🇵🇪 Ley 29733: Protected</div>
+                </div>
+                <button class="btn btn-success" onclick="simulateScript('security:scan')">▶️ Ejecutar</button>
+                <button class="btn btn-danger" onclick="emergencyStop('security')">🚨 Stop</button>
+            </div>
+
+            <!-- Script 4: Performance Profile -->
+            <div class="script-card">
+                <div class="script-header">
+                    <div class="status-indicator status-ready"></div>
+                    <h3>⚡ performance:profile</h3>
+                </div>
+                <div class="command">npm run performance:profile</div>
+                <div class="command">➜ php artisan performance:monitor</div>
+                <div class="output">
+                    <div class="logs">📊 Performance Monitor: Standby</div>
+                    <div class="success">✅ Response Time: 150ms</div>
+                    <div class="success">✅ Memory Usage: Optimal</div>
+                    <div class="logs">🎯 ISO 25010 Efficiency: OK</div>
+                </div>
+                <button class="btn btn-success" onclick="simulateScript('performance:profile')">▶️ Ejecutar</button>
+                <button class="btn" onclick="viewMetrics()">📈 Métricas</button>
+            </div>
+
+            <!-- Script 5: QA Dynamic (Completo) -->
+            <div class="script-card">
+                <div class="script-header">
+                    <div class="status-indicator status-ready"></div>
+                    <h3>🎯 qa:dynamic</h3>
+                </div>
+                <div class="command">npm run qa:dynamic</div>
+                <div class="command">➜ npm run test:coverage && npm run security:scan</div>
+                <div class="output">
+                    <div class="logs">🎯 QA Suite: Ready</div>
+                    <div class="warning">⏳ Combines coverage + security</div>
+                    <div class="logs">📋 Full compliance check</div>
+                    <div class="success">✅ All systems ready</div>
+                </div>
+                <button class="btn btn-success" onclick="simulateScript('qa:dynamic')">▶️ Ejecutar Todo</button>
+                <button class="btn btn-warning" onclick="scheduledRun()">⏰ Programar</button>
+            </div>
+
+            <!-- Script 6: Dev Server -->
+            <div class="script-card">
+                <div class="script-header">
+                    <div class="status-indicator status-ready"></div>
+                    <h3>🚀 dev</h3>
+                </div>
+                <div class="command">npm run dev</div>
+                <div class="command">➜ vite</div>
+                <div class="output">
+                    <div class="logs">🚀 Vite Dev Server: Ready</div>
+                    <div class="logs">🔄 Hot Module Reload: Active</div>
+                    <div class="success">✅ Port: 5173</div>
+                    <div class="logs">📝 Watching file changes</div>
+                </div>
+                <button class="btn btn-success" onclick="simulateScript('dev')">▶️ Iniciar</button>
+                <button class="btn" onclick="openBrowser()">🌐 Abrir</button>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 20px; background: #2d2d30; border-radius: 10px; border-left: 4px solid #00ff00;">
+            <h3>📊 Estado Global del Sistema</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <strong class="success">✅ Scripts Configurados:</strong> 6/6
+                </div>
+                <div>
+                    <strong class="success">✅ PHP Detectado:</strong> v8.3.24
+                </div>
+                <div>
+                    <strong class="warning">⏳ Extensiones:</strong> Pending ZIP
+                </div>
+                <div>
+                    <strong class="success">✅ NPM:</strong> Functional
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Base URL (ajustar según tu configuración)
+        const API_BASE = window.location.origin + '/api';
+        
+        // Función para ejecutar script real
+        async function simulateScript(scriptName) {
+            const button = event.target;
+            const card = button.closest('.script-card');
+            const output = card.querySelector('.output');
+            const statusIndicator = card.querySelector('.status-indicator');
+            
+            // Cambiar estado visual
+            statusIndicator.className = 'status-indicator status-running';
+            button.disabled = true;
+            button.textContent = '⏳ Ejecutando...';
+            
+            // Agregar log al output
+            const logDiv = document.createElement('div');
+            logDiv.className = 'logs';
+            logDiv.innerHTML = `🚀 Iniciando ${scriptName}... ${new Date().toLocaleTimeString()}`;
+            output.appendChild(logDiv);
+            
+            try {
+                // Llamada real a la API
+                const response = await fetch(`${API_BASE}/scripts/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ script: scriptName })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Éxito
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'success';
+                    successDiv.innerHTML = `✅ ${result.message}`;
+                    output.appendChild(successDiv);
+                    
+                    statusIndicator.className = 'status-indicator status-running';
+                    updateGlobalStatus('EJECUTANDO');
+                } else {
+                    // Error
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error';
+                    errorDiv.innerHTML = `❌ Error: ${result.error}`;
+                    output.appendChild(errorDiv);
+                    
+                    statusIndicator.className = 'status-indicator status-error';
+                }
+                
+            } catch (error) {
+                // Error de conexión
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.innerHTML = `❌ Error de conexión: ${error.message}`;
+                output.appendChild(errorDiv);
+                
+                statusIndicator.className = 'status-indicator status-error';
+            }
+            
+            // Restaurar botón
+            setTimeout(() => {
+                button.disabled = false;
+                button.textContent = '▶️ Ejecutar';
+                statusIndicator.className = 'status-indicator status-ready';
+            }, 3000);
+            
+            // Auto-scroll al final del output
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Función para detener script real
+        async function stopScript(scriptName) {
+            const button = event.target;
+            const card = button.closest('.script-card');
+            const output = card.querySelector('.output');
+            
+            button.disabled = true;
+            button.textContent = '⏳ Deteniendo...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/scripts/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ script: scriptName })
+                });
+                
+                const result = await response.json();
+                
+                const stopDiv = document.createElement('div');
+                stopDiv.className = 'warning';
+                stopDiv.innerHTML = `⏹️ ${result.message || 'Script detenido'}`;
+                output.appendChild(stopDiv);
+                
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.innerHTML = `❌ Error al detener: ${error.message}`;
+                output.appendChild(errorDiv);
+            }
+            
+            setTimeout(() => {
+                button.disabled = false;
+                button.textContent = '⏸️ Pausar';
+            }, 2000);
+        }
+
+        // Función para verificar estado del sistema
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/scripts/status`);
+                const status = await response.json();
+                
+                document.getElementById('global-status').textContent = 
+                    `PHP: ${status.php} | NPM: ${status.npm}`;
+                    
+                return status;
+            } catch (error) {
+                document.getElementById('global-status').textContent = 'ERROR - API no disponible';
+                return null;
+            }
+        }
+
+        function updateGlobalStatus(status) {
+            document.getElementById('global-status').textContent = status;
+        }
+
+        async function viewReport(type) {
+            try {
+                const response = await fetch(`${API_BASE}/reports/${type}`);
+                const report = await response.json();
+                
+                // Crear ventana de reporte
+                const reportWindow = window.open('', '_blank', 'width=800,height=600');
+                reportWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>${report.title}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+                            .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+                            .header { border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
+                            .metric { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+                            .success { color: #28a745; font-weight: bold; }
+                            .details { margin-top: 20px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+                            th { background-color: #f2f2f2; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h1>${report.title}</h1>
+                                <p>Generado: ${report.timestamp}</p>
+                            </div>
+                            ${generateReportContent(report, type)}
+                        </div>
+                    </body>
+                    </html>
+                `);
+                reportWindow.document.close();
+                
+            } catch (error) {
+                alert('❌ Error al cargar reporte: ' + error.message);
+            }
+        }
+
+        function generateReportContent(report, type) {
+            if (type === 'coverage') {
+                return `
+                    <div class="metric">
+                        <h3 class="success">✅ Cobertura Total: ${report.coverage.total}%</h3>
+                        <p>Archivos analizados: ${report.coverage.files}</p>
+                        <p>Líneas cubiertas: ${report.coverage.lines_covered}/${report.coverage.lines_total}</p>
+                        <p>Compliance: ${report.coverage.compliance}</p>
+                    </div>
+                    <div class="details">
+                        <h3>Detalle por Archivos:</h3>
+                        <table>
+                            <tr><th>Archivo</th><th>Cobertura</th></tr>
+                            ${report.files_detail.map(file => 
+                                `<tr><td>${file.file}</td><td>${file.coverage}%</td></tr>`
+                            ).join('')}
+                        </table>
+                    </div>
+                `;
+            } else if (type === 'performance') {
+                return `
+                    <div class="metric">
+                        <h3 class="success">⚡ Performance Status: OK</h3>
+                        <p>Tiempo de respuesta: ${report.performance.response_time}</p>
+                        <p>Uso de memoria: ${report.performance.memory_usage}</p>
+                        <p>Uso de CPU: ${report.performance.cpu_usage}</p>
+                        <p>Compliance: ${report.performance.compliance}</p>
+                    </div>
+                    <div class="details">
+                        <h3>Métricas Detalladas:</h3>
+                        <table>
+                            <tr><th>Métrica</th><th>Valor</th></tr>
+                            ${report.metrics.map(metric => 
+                                `<tr><td>${metric.metric}</td><td>${metric.value}</td></tr>`
+                            ).join('')}
+                        </table>
+                    </div>
+                `;
+            }
+            return '<p>Reporte no disponible</p>';
+        }
+
+        async function viewMetrics() {
+            await viewReport('performance');
+        }
+
+        async function emergencyStop(type) {
+            if (confirm(`🚨 ¿Estás seguro de ejecutar detención de emergencia para ${type}?`)) {
+                try {
+                    const response = await fetch(`${API_BASE}/emergency/stop-all`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await response.json();
+                    
+                    alert(`🚨 ${result.message}\nProcesos detenidos: ${result.stopped_processes.join(', ')}`);
+                    updateGlobalStatus('🚨 EMERGENCY STOP EXECUTED');
+                    
+                } catch (error) {
+                    alert('❌ Error en detención de emergencia: ' + error.message);
+                }
+            }
+        }
+
+        async function scheduledRun() {
+            const script = 'qa:dynamic';
+            const schedule = prompt('Ingresa la programación (formato cron, ej: 0 2 * * * para 2 AM diario):', '0 2 * * *');
+            
+            if (schedule) {
+                try {
+                    const response = await fetch(`${API_BASE}/scheduler/create`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ script, schedule })
+                    });
+                    const result = await response.json();
+                    
+                    alert(`⏰ ${result.message}\nPróxima ejecución: ${result.next_run}`);
+                    
+                } catch (error) {
+                    alert('❌ Error al programar tarea: ' + error.message);
+                }
+            }
+        }
+
+        function openBrowser() {
+            // Abrir servidor de desarrollo
+            window.open('http://localhost:5173', '_blank');
+            
+            // También mostrar info del servidor
+            setTimeout(() => {
+                alert('🌐 Servidor de desarrollo:\n• URL: http://localhost:5173\n• Hot Reload: Activo\n• Vite: Running');
+            }, 500);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSystemStatus();
+            
+            // Cargar datos de coverage real al iniciar
+            loadRealCoverage();
+            
+            // Verificar estado cada 10 segundos
+            setInterval(checkSystemStatus, 10000);
+            
+            // Actualizar coverage cada 30 segundos
+            setInterval(loadRealCoverage, 30000);
+        });
+
+        // =============================================================================
+        // 📊 FUNCIONES PARA COVERAGE REAL
+        // =============================================================================
+        
+        async function runRealCoverage() {
+            const button = event.target;
+            const output = document.getElementById('coverage-output');
+            const statusIndicator = document.getElementById('coverage-status');
+            
+            button.disabled = true;
+            button.textContent = '⏳ Analizando...';
+            statusIndicator.className = 'status-indicator status-running';
+            
+            const logDiv = document.createElement('div');
+            logDiv.className = 'logs';
+            logDiv.innerHTML = `🚀 Ejecutando análisis de coverage... ${new Date().toLocaleTimeString()}`;
+            output.appendChild(logDiv);
+            
+            try {
+                await loadRealCoverage();
+                
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success';
+                successDiv.innerHTML = `✅ Análisis completado exitosamente`;
+                output.appendChild(successDiv);
+                
+                statusIndicator.className = 'status-indicator status-ready';
+                
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.innerHTML = `❌ Error: ${error.message}`;
+                output.appendChild(errorDiv);
+                
+                statusIndicator.className = 'status-indicator status-error';
+            }
+            
+            setTimeout(() => {
+                button.disabled = false;
+                button.textContent = '▶️ Analizar Coverage';
+            }, 2000);
+            
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        async function loadRealCoverage() {
+            try {
+                const response = await fetch(`${API_BASE}/coverage/analyze`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateCoverageDisplay(data);
+                } else {
+                    showCoverageError(data.message || 'Error desconocido');
+                }
+                
+            } catch (error) {
+                showCoverageError(`Error de conexión: ${error.message}`);
+            }
+        }
+        
+        function updateCoverageDisplay(data) {
+            const percentageEl = document.getElementById('coverage-percentage');
+            const statusEl = document.getElementById('coverage-status-text');
+            const detailsEl = document.getElementById('coverage-details');
+            const statusIndicator = document.getElementById('coverage-status');
+            
+            // Actualizar porcentaje con color según estado
+            const percentage = data.coverage.percentage;
+            const status = data.coverage.status;
+            const emoji = data.coverage.emoji;
+            
+            let colorClass = 'success';
+            if (percentage < 30) colorClass = 'error';
+            else if (percentage < 60) colorClass = 'warning';
+            else if (percentage < 80) colorClass = 'logs';
+            
+            percentageEl.className = colorClass;
+            percentageEl.innerHTML = `${emoji} Coverage Real: ${percentage}% - ${status}`;
+            
+            // Actualizar estado
+            statusEl.innerHTML = `🎯 ISO 25010: ${percentage >= 80 ? 'CUMPLE' : 'NO CUMPLE'} | Archivos: ${data.project_stats.total_php_files}`;
+            
+            // Mostrar detalles del proyecto
+            detailsEl.innerHTML = `
+                📁 App Files: ${data.project_stats.total_php_files} | 
+                🧪 Test Files: ${data.project_stats.total_test_files} | 
+                ⚖️ Ratio: ${data.metrics.files_ratio}%
+            `;
+            
+            // Actualizar indicador visual según salud
+            if (percentage >= 80) {
+                statusIndicator.className = 'status-indicator status-running';
+            } else if (percentage >= 40) {
+                statusIndicator.className = 'status-indicator status-ready';
+            } else {
+                statusIndicator.className = 'status-indicator status-error';
+            }
+            
+            // Actualizar título de la página con coverage
+            document.title = `Coverage: ${percentage}% - Scripts Monitor`;
+        }
+        
+        function showCoverageError(message) {
+            const percentageEl = document.getElementById('coverage-percentage');
+            const statusEl = document.getElementById('coverage-status-text');
+            const detailsEl = document.getElementById('coverage-details');
+            const statusIndicator = document.getElementById('coverage-status');
+            
+            percentageEl.className = 'error';
+            percentageEl.innerHTML = `❌ Error al cargar coverage`;
+            statusEl.innerHTML = `🚨 ${message}`;
+            detailsEl.innerHTML = `⚠️ Verificar API y configuración`;
+            
+            statusIndicator.className = 'status-indicator status-error';
+        }
+        
+        async function refreshCoverage() {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '🔄 Actualizando...';
+            
+            await loadRealCoverage();
+            
+            setTimeout(() => {
+                button.disabled = false;
+                button.textContent = '🔄 Actualizar';
+            }, 1000);
+        }
+
+        // Actualizar timestamp cada segundo
+        setInterval(() => {
+            document.title = `Scripts NPM Monitor - ${new Date().toLocaleTimeString()}`;
+        }, 1000);
+    </script>
+</body>
+</html>

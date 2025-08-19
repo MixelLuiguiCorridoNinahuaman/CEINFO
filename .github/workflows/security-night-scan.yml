@@ -1,0 +1,230 @@
+name: 🛡️ Security Night Scan
+
+on:
+  schedule:
+    # Ejecutar todas las noches a las 3 AM UTC (11 PM hora Perú)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Tipo de escaneo'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - dependencies-only
+        - code-only
+
+env:
+  APP_ENV: testing
+
+jobs:
+  # =============================================================================
+  # 🔐 ESCANEO COMPLETO DE SEGURIDAD
+  # =============================================================================
+  security-deep-scan:
+    runs-on: ubuntu-latest
+    name: 🔐 Escaneo Profundo de Seguridad
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, sqlite
+        
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📦 Instalar dependencias
+      run: |
+        composer install --no-dev --optimize-autoloader
+        npm ci
+        
+    - name: 🔍 Análisis de dependencias vulnerables
+      run: |
+        echo "🔍 Analizando dependencias PHP..."
+        composer audit --format=json > composer-audit.json || true
+        
+        echo "🔍 Analizando dependencias NPM..."
+        npm audit --json > npm-audit.json || true
+        
+    - name: 🛡️ Ejecutar scanner de seguridad personalizado
+      run: |
+        npm run security:scan -- --deep-scan
+        
+    - name: 🔐 Análisis estático con PHPStan
+      run: |
+        composer require --dev phpstan/phpstan
+        vendor/bin/phpstan analyse app --level=5 --error-format=github
+        
+    - name: 🔍 Buscar secretos y credenciales
+      run: |
+        echo "🔍 Buscando posibles secretos en el código..."
+        
+        # Buscar patrones de API keys, passwords, etc.
+        echo "## 🔐 Análisis de Secretos" > security-secrets-report.md
+        echo "" >> security-secrets-report.md
+        
+        # Buscar posibles claves API
+        if grep -r -i "api[_-]key\|apikey" --include="*.php" --include="*.js" app/ public/ resources/ || true; then
+          echo "⚠️ Posibles API keys encontradas" >> security-secrets-report.md
+        fi
+        
+        # Buscar passwords hardcodeados
+        if grep -r -i "password.*=" --include="*.php" app/ | grep -v "bcrypt\|Hash::" || true; then
+          echo "⚠️ Posibles passwords hardcodeados" >> security-secrets-report.md
+        fi
+        
+        # Verificar configuración .env
+        if grep -i "app_debug=true" .env.example || true; then
+          echo "⚠️ Debug mode en .env.example" >> security-secrets-report.md
+        fi
+        
+    - name: 🌐 Verificar configuraciones web
+      run: |
+        echo "🌐 Verificando configuraciones de seguridad web..."
+        
+        # Verificar archivos .htaccess
+        if [ -f public/.htaccess ]; then
+          echo "✅ .htaccess encontrado"
+          
+          # Verificar headers de seguridad
+          if grep -q "X-Frame-Options" public/.htaccess; then
+            echo "✅ X-Frame-Options configurado"
+          else
+            echo "⚠️ X-Frame-Options faltante"
+          fi
+        fi
+        
+        # Verificar robots.txt
+        if [ -f public/robots.txt ]; then
+          echo "✅ robots.txt encontrado"
+        fi
+        
+    - name: 📊 Generar reporte unificado de seguridad
+      run: |
+        echo "# 🛡️ Reporte de Seguridad Nocturno" > security-night-report.md
+        echo "Fecha: $(date)" >> security-night-report.md
+        echo "Commit: ${{ github.sha }}" >> security-night-report.md
+        echo "" >> security-night-report.md
+        
+        echo "## 📋 Resumen:" >> security-night-report.md
+        
+        # Contar vulnerabilidades
+        COMPOSER_VULNS=0
+        NPM_VULNS=0
+        
+        if [ -f composer-audit.json ]; then
+          COMPOSER_VULNS=$(cat composer-audit.json | jq '.advisories | length' 2>/dev/null || echo 0)
+        fi
+        
+        if [ -f npm-audit.json ]; then
+          NPM_VULNS=$(cat npm-audit.json | jq '.metadata.vulnerabilities.total' 2>/dev/null || echo 0)
+        fi
+        
+        echo "- 📦 Vulnerabilidades Composer: $COMPOSER_VULNS" >> security-night-report.md
+        echo "- 📦 Vulnerabilidades NPM: $NPM_VULNS" >> security-night-report.md
+        
+        # Agregar reporte de secretos si existe
+        if [ -f security-secrets-report.md ]; then
+          echo "" >> security-night-report.md
+          cat security-secrets-report.md >> security-night-report.md
+        fi
+        
+        # Agregar recomendaciones
+        echo "" >> security-night-report.md
+        echo "## 💡 Recomendaciones:" >> security-night-report.md
+        
+        if [ $COMPOSER_VULNS -gt 0 ]; then
+          echo "- 🚨 Actualizar dependencias PHP vulnerables" >> security-night-report.md
+        fi
+        
+        if [ $NPM_VULNS -gt 0 ]; then
+          echo "- 🚨 Actualizar dependencias NPM vulnerables" >> security-night-report.md
+        fi
+        
+        echo "- 🔐 Revisar configuraciones de seguridad" >> security-night-report.md
+        echo "- 🛡️ Mantener Laravel actualizado" >> security-night-report.md
+        echo "- 📊 Monitorear logs de seguridad" >> security-night-report.md
+        
+    - name: 💾 Subir reportes de seguridad
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-night-scan-${{ github.run_number }}
+        path: |
+          security-night-report.md
+          composer-audit.json
+          npm-audit.json
+          security-secrets-report.md
+        retention-days: 90
+        
+    - name: 📧 Enviar notificación por email (si hay vulnerabilidades críticas)
+      if: always()
+      run: |
+        # Aquí se podría integrar con un servicio de email
+        # Por ahora solo loggeamos
+        echo "📧 Notificación de seguridad preparada"
+        echo "Ver artefactos para detalles completos"
+
+  # =============================================================================
+  # 🔄 ACTUALIZACIÓN AUTOMÁTICA DE DEPENDENCIAS
+  # =============================================================================
+  dependency-update-check:
+    runs-on: ubuntu-latest
+    name: 🔄 Check de Actualizaciones
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo
+        
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📦 Verificar actualizaciones de Composer
+      run: |
+        composer install
+        composer outdated --direct > composer-outdated.txt || true
+        
+        echo "## 📦 Actualizaciones Disponibles - PHP" > updates-report.md
+        echo "" >> updates-report.md
+        echo '```' >> updates-report.md
+        cat composer-outdated.txt >> updates-report.md
+        echo '```' >> updates-report.md
+        echo "" >> updates-report.md
+        
+    - name: 📦 Verificar actualizaciones de NPM
+      run: |
+        npm outdated > npm-outdated.txt || true
+        
+        echo "## 📦 Actualizaciones Disponibles - NPM" >> updates-report.md
+        echo "" >> updates-report.md
+        echo '```' >> updates-report.md
+        cat npm-outdated.txt >> updates-report.md
+        echo '```' >> updates-report.md
+        
+    - name: 💾 Subir reporte de actualizaciones
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-updates-${{ github.run_number }}
+        path: |
+          updates-report.md
+          composer-outdated.txt
+          npm-outdated.txt
+        retention-days: 30

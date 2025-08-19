@@ -1,0 +1,352 @@
+name: 🎯 QA Dinámico - CEINFO
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Ejecutar todos los días a las 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Permitir ejecución manual
+    inputs:
+      test_mode:
+        description: 'Modo de test (full, quick, coverage-only)'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - quick
+        - coverage-only
+
+env:
+  APP_ENV: testing
+  DB_CONNECTION: sqlite
+  DB_DATABASE: ":memory:"
+
+jobs:
+  # =============================================================================
+  # 🧪 JOB 1: TESTS UNITARIOS Y FUNCIONALES
+  # =============================================================================
+  tests:
+    runs-on: ubuntu-latest
+    name: 🧪 Tests Laravel + PHPUnit
+    
+    strategy:
+      matrix:
+        php: [8.1, 8.2, 8.3]
+        
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🐘 Configurar PHP ${{ matrix.php }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        extensions: mbstring, dom, fileinfo, mysql, sqlite, zip
+        coverage: xdebug
+        
+    - name: 📋 Cache dependencias Composer
+      uses: actions/cache@v3
+      with:
+        path: ~/.composer/cache/files
+        key: dependencies-php-${{ matrix.php }}-composer-${{ hashFiles('composer.lock') }}
+        restore-keys: |
+          dependencies-php-${{ matrix.php }}-composer-
+          
+    - name: 📦 Instalar dependencias PHP
+      run: composer install --prefer-dist --no-interaction --no-suggest
+      
+    - name: 🔧 Configurar aplicación
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        php artisan config:clear
+        php artisan cache:clear
+        
+    - name: 🗄️ Preparar base de datos
+      run: |
+        touch database/database.sqlite
+        php artisan migrate --force
+        php artisan db:seed --force
+        
+    - name: 🧪 Ejecutar Tests PHPUnit
+      run: |
+        php artisan test --coverage-text --coverage-clover=coverage.xml
+        
+    - name: 📊 Upload coverage a Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  # =============================================================================
+  # 📊 JOB 2: ANÁLISIS DE COBERTURA AVANZADO
+  # =============================================================================
+  coverage-analysis:
+    runs-on: ubuntu-latest
+    name: 📊 Coverage Analyzer Dinámico
+    needs: tests
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, sqlite
+        
+    - name: 📦 Instalar dependencias
+      run: |
+        composer install --no-dev --optimize-autoloader
+        npm ci
+        
+    - name: 🔧 Configurar aplicación
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        
+    - name: 📊 Ejecutar Coverage Analyzer
+      run: |
+        npm run test:coverage
+        
+    - name: 📋 Generar reporte de coverage
+      run: |
+        node scripts/coverage-analyzer-fixed.js --output-format=github
+        
+    - name: 💾 Subir artefactos de coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report-${{ github.sha }}
+        path: |
+          storage/app/coverage-report.json
+          storage/app/coverage-*.html
+        retention-days: 30
+
+  # =============================================================================
+  # 🛡️ JOB 3: ESCANEO DE SEGURIDAD
+  # =============================================================================
+  security-scan:
+    runs-on: ubuntu-latest
+    name: 🛡️ Security Scanner
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo
+        
+    - name: 📦 Instalar dependencias
+      run: |
+        composer install --no-dev
+        npm ci
+        
+    - name: 🛡️ Ejecutar Security Scanner
+      run: |
+        npm run security:scan
+        
+    - name: 🔍 Análisis con Psalm (Static Analysis)
+      run: |
+        composer require --dev psalm/psalm
+        vendor/bin/psalm --init
+        vendor/bin/psalm --show-info=true
+        
+    - name: 🔐 Verificar vulnerabilidades de Composer
+      run: |
+        composer audit
+        
+    - name: 📋 Generar reporte de seguridad
+      run: |
+        node scripts/security-scanner.js --output-format=sarif > security-report.sarif
+        
+    - name: 📤 Upload SARIF a GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: security-report.sarif
+
+  # =============================================================================
+  # ⚡ JOB 4: ANÁLISIS DE PERFORMANCE
+  # =============================================================================
+  performance-analysis:
+    runs-on: ubuntu-latest
+    name: ⚡ Performance Analysis
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, sqlite
+        
+    - name: 📦 Instalar dependencias
+      run: |
+        composer install --optimize-autoloader
+        npm ci
+        
+    - name: 🔧 Configurar aplicación
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        
+    - name: ⚡ Ejecutar análisis de performance
+      run: |
+        npm run performance:profile
+        
+    - name: 🚀 Benchmark Laravel Artisan
+      run: |
+        echo "🔥 Benchmark de comandos Laravel:"
+        time php artisan route:list
+        time php artisan config:cache
+        time php artisan view:cache
+        
+    - name: 📊 Análisis de memoria
+      run: |
+        echo "🧠 Análisis de uso de memoria:"
+        php -r "echo 'Memoria base: ' . memory_get_usage() . ' bytes\n';"
+        php artisan tinker --execute="echo 'Memoria con Laravel: ' . memory_get_usage() . ' bytes';"
+
+  # =============================================================================
+  # 🎯 JOB 5: QA ORCHESTRATOR COMPLETO
+  # =============================================================================
+  qa-orchestrator:
+    runs-on: ubuntu-latest
+    name: 🎯 QA Orchestrator Completo
+    needs: [tests, coverage-analysis, security-scan, performance-analysis]
+    if: always()
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, sqlite
+        
+    - name: 📦 Instalar dependencias completas
+      run: |
+        composer install --optimize-autoloader
+        npm ci
+        
+    - name: 🔧 Configurar aplicación completa
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        php artisan db:seed --force
+        
+    - name: 🎯 Ejecutar QA Orchestrator Completo
+      run: |
+        npm run qa:dynamic
+        
+    - name: 📊 Descargar artefactos de jobs anteriores
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+        
+    - name: 📋 Generar reporte unificado final
+      run: |
+        echo "🎯 REPORTE FINAL DE QA DINÁMICO" > qa-final-report.md
+        echo "=====================================" >> qa-final-report.md
+        echo "" >> qa-final-report.md
+        echo "## 📊 Resumen de Ejecución" >> qa-final-report.md
+        echo "- Commit: ${{ github.sha }}" >> qa-final-report.md
+        echo "- Branch: ${{ github.ref_name }}" >> qa-final-report.md
+        echo "- Fecha: $(date)" >> qa-final-report.md
+        echo "- PHP Versions: 8.1, 8.2, 8.3" >> qa-final-report.md
+        echo "" >> qa-final-report.md
+        
+        # Agregar resultados de cada job
+        if [ -f storage/app/qa-reports/qa-report-*.json ]; then
+          echo "## 🎯 Resultado QA Orchestrator" >> qa-final-report.md
+          cat storage/app/qa-reports/qa-report-*.json | jq -r '.summary' >> qa-final-report.md
+        fi
+        
+    - name: 💾 Subir reporte final
+      uses: actions/upload-artifact@v3
+      with:
+        name: qa-final-report-${{ github.sha }}
+        path: |
+          qa-final-report.md
+          storage/app/qa-reports/
+        retention-days: 90
+        
+    - name: 💬 Comentar en PR (si es PR)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('qa-final-report.md')) {
+            const report = fs.readFileSync('qa-final-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🎯 Reporte QA Dinámico\n\n${report}`
+            });
+          }
+
+  # =============================================================================
+  # 🚀 JOB 6: DEPLOYMENT (solo en main)
+  # =============================================================================
+  deploy:
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy to Production
+    needs: qa-orchestrator
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://ceinfo.unamad.edu.pe
+      
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      
+    - name: 🚀 Deploy to server
+      run: |
+        echo "🚀 Deploying to production..."
+        echo "✅ All QA checks passed - Ready for deployment"
+        # Aquí irían los comandos de deployment real

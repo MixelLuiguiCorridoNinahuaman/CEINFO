@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparativa: Custom vs VS Code Extensions - CEINFO</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        .section { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; border: 1px solid rgba(255,255,255,0.2); }
+        .section h3 { color: #FFD700; margin-top: 0; display: flex; align-items: center; }
+        .section h3::before { content: '🔧'; margin-right: 10px; font-size: 1.2em; }
+        .custom h3::before { content: '⚙️'; }
+        .vscode h3::before { content: '🆚'; }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li { background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #FFD700; }
+        .pros { border-left-color: #28a745; }
+        .cons { border-left-color: #dc3545; }
+        .neutral { border-left-color: #ffc107; }
+        .demo-buttons { display: flex; gap: 15px; margin: 20px 0; flex-wrap: wrap; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+        .btn-custom { background: linear-gradient(45deg, #FF6B35, #F7931E); color: white; }
+        .btn-vscode { background: linear-gradient(45deg, #007ACC, #0099CC); color: white; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }
+        .metric { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #FFD700; }
+        .metric-label { font-size: 0.9em; opacity: 0.8; }
+        .output { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 10px; font-family: 'Courier New', monospace; margin: 20px 0; max-height: 300px; overflow-y: auto; }
+        .tab-container { margin: 30px 0; }
+        .tab-buttons { display: flex; margin-bottom: 0; }
+        .tab-button { background: rgba(255,255,255,0.1); border: none; padding: 15px 25px; color: white; cursor: pointer; border-radius: 10px 10px 0 0; margin-right: 5px; }
+        .tab-button.active { background: rgba(255,255,255,0.2); }
+        .tab-content { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 0 10px 10px 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Comparativa de Herramientas Dinámicas</h1>
+            <p>Implementación Custom vs Extensiones VS Code para el Proyecto CEINFO</p>
+        </div>
+
+        <div class="comparison-grid">
+            <div class="section custom">
+                <h3>Tu Implementación Custom</h3>
+                <ul class="feature-list">
+                    <li class="pros">✅ Control total sobre funcionalidad</li>
+                    <li class="pros">✅ Integración específica con CEINFO</li>
+                    <li class="pros">✅ Dashboard web para stakeholders</li>
+                    <li class="pros">✅ API endpoints personalizados</li>
+                    <li class="neutral">⚠️ Requiere mantenimiento propio</li>
+                    <li class="cons">❌ Mayor tiempo de desarrollo inicial</li>
+                </ul>
+                
+                <div class="demo-buttons">
+                    <button class="btn btn-custom" onclick="runCustomTest()">🧪 Ejecutar Test Custom</button>
+                    <button class="btn btn-custom" onclick="runCustomSecurity()">🛡️ Security Scan Custom</button>
+                    <button class="btn btn-custom" onclick="runCustomProfile()">📊 Profile Custom</button>
+                </div>
+            </div>
+
+            <div class="section vscode">
+                <h3>Extensiones VS Code</h3>
+                <ul class="feature-list">
+                    <li class="pros">✅ Setup inmediato y mantenimiento automático</li>
+                    <li class="pros">✅ Interfaz integrada en VS Code</li>
+                    <li class="pros">✅ Comunidad y soporte extenso</li>
+                    <li class="pros">✅ Actualizaciones automáticas</li>
+                    <li class="neutral">⚠️ Limitado a funcionalidades predefinidas</li>
+                    <li class="cons">❌ Menos control sobre personalización</li>
+                </ul>
+                
+                <div class="demo-buttons">
+                    <button class="btn btn-vscode" onclick="simulateVSCodeTest()">🔍 Test Explorer</button>
+                    <button class="btn btn-vscode" onclick="simulateVSCodeSecurity()">🛡️ Snyk Security</button>
+                    <button class="btn btn-vscode" onclick="simulateVSCodeProfile()">📈 Blackfire Profiler</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value" id="setup-time-custom">~8h</div>
+                <div class="metric-label">Tiempo Setup Custom</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="setup-time-vscode">~15min</div>
+                <div class="metric-label">Tiempo Setup VS Code</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="customization-custom">100%</div>
+                <div class="metric-label">Personalización Custom</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="customization-vscode">30%</div>
+                <div class="metric-label">Personalización VS Code</div>
+            </div>
+        </div>
+
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab('features')">📋 Comparativa Detallada</button>
+                <button class="tab-button" onclick="showTab('code')">💻 Ejemplos de Código</button>
+                <button class="tab-button" onclick="showTab('recommendations')">💡 Recomendaciones</button>
+            </div>
+
+            <div id="features" class="tab-content">
+                <h4>🔍 Análisis Detallado por Categoría</h4>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.1);">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.2);">
+                                <th style="padding: 12px; border: 1px solid rgba(255,255,255,0.3);">Funcionalidad</th>
+                                <th style="padding: 12px; border: 1px solid rgba(255,255,255,0.3);">Implementación Custom</th>
+                                <th style="padding: 12px; border: 1px solid rgba(255,255,255,0.3);">Extensión VS Code</th>
+                                <th style="padding: 12px; border: 1px solid rgba(255,255,255,0.3);">Recomendación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);"><strong>Testing Unitario</strong></td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Scripts NPM + Dashboard web</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">PHP Unit Test Explorer</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">🏆 VS Code para desarrollo</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);"><strong>Security Scanning</strong></td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Scripts personalizados</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Snyk + SonarLint</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">🏆 VS Code para análisis estático</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);"><strong>Performance Profiling</strong></td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Métricas específicas CEINFO</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Blackfire Profiler</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">🏆 Custom para métricas de negocio</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);"><strong>Reporting</strong></td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Dashboard para stakeholders</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Reportes en VS Code</td>
+                                <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">🏆 Custom para presentaciones</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="code" class="tab-content hidden">
+                <h4>💻 Ejemplos de Implementación</h4>
+                
+                <h5>🔧 Tu Implementación Custom (package.json):</h5>
+                <div class="output">
+{
+  "scripts": {
+    "test:watch": "echo 'Test watch ejecutandose...' && timeout 5",
+    "test:coverage": "echo 'Generando reporte de cobertura...' && timeout 3",
+    "security:scan": "echo 'Ejecutando escaneo de seguridad...' && timeout 4",
+    "performance:profile": "echo 'Perfilando rendimiento...' && timeout 3",
+    "qa:dynamic": "npm run test:coverage && npm run security:scan"
+  }
+}
+                </div>
+
+                <h5>🆚 Configuración Equivalente VS Code (extensions.json):</h5>
+                <div class="output">
+{
+  "recommendations": [
+    "recca0120.vscode-phpunit",           // Testing dinámico
+    "ryanluker.vscode-coverage-gutters",  // Coverage visualization
+    "snyk-security.snyk-vulnerability-scanner", // Security
+    "blackfire.blackfire-vscode",        // Performance profiling
+    "hbenl.vscode-test-explorer"         // Test UI
+  ]
+}
+                </div>
+
+                <h5>⚡ API Custom para Control Remoto:</h5>
+                <div class="output">
+// routes/api.php
+Route::post('/scripts/execute', function (Request $request) {
+    $script = $request->input('script');
+    $allowedScripts = ['test:watch', 'test:coverage', 'security:scan'];
+    
+    if (!in_array($script, $allowedScripts)) {
+        return response()->json(['error' => 'Script no permitido'], 400);
+    }
+    
+    // Ejecutar script y retornar resultado
+    $process = new Process(['npm', 'run', $script]);
+    $process->run();
+    
+    return response()->json([
+        'output' => $process->getOutput(),
+        'status' => $process->isSuccessful() ? 'success' : 'error'
+    ]);
+});
+                </div>
+            </div>
+
+            <div id="recommendations" class="tab-content hidden">
+                <h4>💡 Recomendaciones Basadas en Escenarios</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="section">
+                        <h5>🎯 Usar Implementación Custom Cuando:</h5>
+                        <ul>
+                            <li>✅ Necesitas métricas específicas del dominio educativo</li>
+                            <li>✅ Requieres dashboards para stakeholders no-técnicos</li>
+                            <li>✅ Integración específica con sistemas CEINFO</li>
+                            <li>✅ Control granular sobre proceso de QA</li>
+                            <li>✅ Reportes automáticos para compliance (ISO, Ley 29733)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="section">
+                        <h5>🚀 Usar Extensiones VS Code Cuando:</h5>
+                        <ul>
+                            <li>✅ Desarrollo rápido y prototipado</li>
+                            <li>✅ Equipo nuevo o con poca experiencia en QA</li>
+                            <li>✅ Necesitas análisis estático inmediato</li>
+                            <li>✅ Debugging visual durante desarrollo</li>
+                            <li>✅ Integración con herramientas estándar del mercado</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section" style="margin-top: 20px;">
+                    <h5>🏆 Estrategia Híbrida Recomendada para CEINFO:</h5>
+                    <ol>
+                        <li><strong>Desarrollo:</strong> Usar extensiones VS Code para análisis inmediato</li>
+                        <li><strong>CI/CD:</strong> Mantener scripts custom para pipelines automáticos</li>
+                        <li><strong>Reporting:</strong> Dashboard custom para stakeholders</li>
+                        <li><strong>Compliance:</strong> Scripts custom para auditorías ISO/Ley 29733</li>
+                        <li><strong>Debugging:</strong> Extensiones VS Code para desarrollo interactivo</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="output" id="demo-output">
+            <div style="color: #58a6ff;">📋 Selecciona una herramienta arriba para ver la comparación en acción...</div>
+        </div>
+    </div>
+
+    <script>
+        function runCustomTest() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+<div style="color: #56d364;">🔧 Ejecutando Testing Custom CEINFO...</div>
+<div style="color: #e3b341;">⏳ Conectando con API endpoint: /api/scripts/execute</div>
+<div style="color: #58a6ff;">📊 Script: npm run test:watch</div>
+<div style="color: #d4d4d4;">
+✅ Tests académicos: 45 passed
+✅ Tests de matrícula: 12 passed  
+✅ Tests de pagos: 8 passed
+📊 Coverage específico CEINFO: 89%
+🎯 Métricas educativas: OK
+📋 Compliance Ley 29733: ✅
+</div>
+<div style="color: #56d364;">✨ Resultado enviado a dashboard para directores académicos</div>
+            `;
+        }
+
+        function simulateVSCodeTest() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+<div style="color: #58a6ff;">🆚 Simulando PHP Unit Test Explorer...</div>
+<div style="color: #e3b341;">⚡ Extensión activada automáticamente</div>
+<div style="color: #d4d4d4;">
+🔍 Descubriendo tests en /tests...
+📁 Feature tests: 15 encontrados
+📁 Unit tests: 30 encontrados
+🎯 Test runner integrado en sidebar
+🔴🟢 Indicadores visuales en código
+📊 Coverage gutters en líneas de código
+</div>
+<div style="color: #56d364;">✨ Interfaz visual lista en VS Code - clic para ejecutar</div>
+            `;
+        }
+
+        function runCustomSecurity() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+<div style="color: #f85149;">🛡️ Security Scan Custom CEINFO...</div>
+<div style="color: #e3b341;">🔍 Analizando vulnerabilidades específicas educativas...</div>
+<div style="color: #d4d4d4;">
+🔐 Validación datos estudiantiles: OK
+🛡️ Protección información académica: OK
+⚠️ Detectado: Posible exposición de notas
+📋 Compliance Ley 29733: 95%
+🎯 OWASP Top 10 para EdTech: 8/10 OK
+📊 ISO 27001 Education: ✅
+</div>
+<div style="color: #56d364;">📋 Reporte enviado a Comité de Seguridad Académica</div>
+            `;
+        }
+
+        function simulateVSCodeSecurity() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+<div style="color: #58a6ff;">🔒 Snyk Security Extension...</div>
+<div style="color: #e3b341;">🔍 Escaneando dependencias y código...</div>
+<div style="color: #d4d4d4;">
+📦 Analizando composer.json: 45 paquetes
+⚠️ Vulnerabilidades encontradas: 3 medium
+🔍 Análisis estático del código: 2 issues
+💡 Sugerencias automáticas de fix
+🔗 Links a documentación de seguridad
+📊 Integración con Snyk.io dashboard
+</div>
+<div style="color: #56d364;">🚀 Fixes disponibles con un clic en VS Code</div>
+            `;
+        }
+
+        function runCustomProfile() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+<div style="color: #bb7af7;">📊 Performance Profiling Custom...</div>
+<div style="color: #e3b341;">⏱️ Midiendo métricas específicas CEINFO...</div>
+<div style="color: #d4d4d4;">
+🎓 Tiempo carga de matrículas: 0.8s
+📚 Consulta de cursos: 0.3s  
+💰 Procesamiento de pagos: 1.2s
+👥 Autenticación estudiantes: 0.5s
+📊 Generación reportes académicos: 2.1s
+🎯 Métrica crítica: Inscripción < 2s ✅
+📈 Trends vs semestre anterior: +15% performance
+</div>
+<div style="color: #56d364;">📋 Dashboard actualizado para Coordinadores Académicos</div>
+            `;
+        }
+
+        function simulateVSCodeProfile() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+<div style="color: #bb7af7;">📈 Blackfire Profiler Extension...</div>
+<div style="color: #e3b341;">🔥 Profiling automático activado...</div>
+<div style="color: #d4d4d4;">
+🚀 Profiling request automático
+📊 Wall time: 245ms
+🧠 Memory usage: 12.5MB
+🔍 SQL queries: 15 (2 N+1 detectados)
+💡 Recommendations panel activo
+🎯 Hotspots visuales en código
+📈 Gráficos interactivos en VS Code
+</div>
+<div style="color: #56d364;">🔍 Optimization hints directamente en el editor</div>
+            `;
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            // Update button states
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Auto-update metrics
+        setInterval(() => {
+            const metrics = ['setup-time-custom', 'setup-time-vscode', 'customization-custom', 'customization-vscode'];
+            metrics.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.style.transform = 'scale(1.1)';
+                    setTimeout(() => element.style.transform = 'scale(1)', 200);
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

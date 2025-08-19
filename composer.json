@@ -47,7 +47,18 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
-        ]
+        ],
+        
+        "# QA Scripts - Equivalentes a NPM Scripts": "#",
+        "test": "@php artisan test",
+        "test:watch": "@php artisan test --watch",
+        "test:coverage": "@php artisan test --coverage",
+        "test:security": "@php artisan test --testsuite=Security",
+        "test:performance": "@php artisan test --testsuite=Performance",
+        "test:feature": "@php artisan test --testsuite=Feature",
+        "test:unit": "@php artisan test --testsuite=Unit",
+        "qa:dynamic": "@php artisan test --coverage --testsuite=Feature,Unit,Security,Performance",
+        "qa:parallel": "@php artisan test --parallel --coverage"
     },
     "extra": {
         "laravel": {

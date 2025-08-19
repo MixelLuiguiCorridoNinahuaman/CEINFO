@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Scripts QA</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .test-container { max-width: 800px; margin: 0 auto; padding: 20px; background: white; border-radius: 8px; }
+        .script-test { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .output { background: #f8f9fa; padding: 10px; margin-top: 10px; border-radius: 4px; min-height: 100px; }
+        .status { padding: 5px 10px; border-radius: 3px; font-weight: bold; }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-running { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test Scripts QA - Laravel CEINFO</h1>
+        <p>Prueba directa de ejecución de scripts NPM</p>
+        
+        <div class="script-test">
+            <h3>Test: Todos los Scripts</h3>
+            <button class="btn btn-primary" onclick="testScript('test:watch')">🧪 Test Watch</button>
+            <button class="btn btn-success" onclick="testScript('test:coverage')">� Coverage</button>
+            <button class="btn btn-primary" onclick="testScript('security:scan')">🔒 Security</button>
+            <button class="btn btn-success" onclick="testScript('performance:profile')">⚡ Performance</button>
+            <button class="btn btn-primary" onclick="testScript('qa:dynamic')">🚀 QA Dynamic</button>
+            <button class="btn btn-success" onclick="testScript('dev')">� Dev Server</button>
+            <div id="output-qa" class="output">Listo para ejecutar...</div>
+        </div>
+
+        <div class="script-test">
+            <h3>Status del Sistema</h3>
+            <button class="btn btn-primary" onclick="checkStatus()">🔍 Verificar Status</button>
+            <div id="output-status" class="output">Click para verificar...</div>
+        </div>
+
+        <div class="script-test">
+            <h3>Logs del Sistema</h3>
+            <div id="system-logs" class="output">Los logs aparecerán aquí...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        
+        async function testScript(scriptName) {
+            const output = document.getElementById('output-qa');
+            output.innerHTML = `<div class="status status-running">🚀 Ejecutando ${scriptName}...</div>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/scripts/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ script: scriptName })
+                });
+                
+                const result = await response.json();
+                console.log('API Response:', result);
+                
+                if (response.ok) {
+                    output.innerHTML += `<div class="status status-success">✅ ${result.message || 'Script ejecutado correctamente'}</div>`;
+                    if (result.output) {
+                        output.innerHTML += `<pre>${result.output}</pre>`;
+                    }
+                } else {
+                    output.innerHTML += `<div class="status status-error">❌ Error: ${result.error}</div>`;
+                    if (result.received && result.allowed) {
+                        output.innerHTML += `<div>Recibido: ${result.received}</div>`;
+                        output.innerHTML += `<div>Permitidos: ${result.allowed.join(', ')}</div>`;
+                    }
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<div class="status status-error">❌ Error de conexión: ${error.message}</div>`;
+                console.error('Error:', error);
+            }
+        }
+
+        async function testSimple(scriptName) {
+            await testScript(scriptName);
+        }
+
+        async function checkStatus() {
+            const output = document.getElementById('output-status');
+            output.innerHTML = `<div class="status status-running">🔍 Verificando status...</div>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/scripts/status`);
+                const result = await response.json();
+                
+                output.innerHTML = `<div class="status status-success">✅ Status obtenido</div>`;
+                output.innerHTML += `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+                
+            } catch (error) {
+                output.innerHTML = `<div class="status status-error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-verificar status al cargar
+        window.addEventListener('load', () => {
+            setTimeout(checkStatus, 1000);
+        });
+
+        // Log de actividad
+        function logActivity(message) {
+            const logs = document.getElementById('system-logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        // Interceptar console.log para mostrar en logs
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logActivity('Console: ' + args.join(' '));
+        };
+
+        logActivity('Sistema de testing iniciado');
+    </script>
+</body>
+</html>

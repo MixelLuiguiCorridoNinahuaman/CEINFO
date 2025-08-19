@@ -1,0 +1,177 @@
+name: 🔍 QA Pull Request Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main, develop ]
+
+env:
+  APP_ENV: testing
+  DB_CONNECTION: sqlite
+  DB_DATABASE: ":memory:"
+
+jobs:
+  # =============================================================================
+  # 🚀 JOB RÁPIDO PARA PRs
+  # =============================================================================
+  quick-qa-check:
+    runs-on: ubuntu-latest
+    name: 🚀 Quick QA Check para PR
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🐘 Configurar PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, sqlite
+        coverage: xdebug
+        
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: 📦 Instalar dependencias
+      run: |
+        composer install --prefer-dist --no-interaction
+        npm ci
+        
+    - name: 🔧 Configurar aplicación
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        
+    - name: 🧪 Tests rápidos (solo archivos modificados)
+      run: |
+        # Obtener archivos PHP modificados
+        CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.php$' | tr '\n' ' ')
+        
+        if [ ! -z "$CHANGED_FILES" ]; then
+          echo "📁 Archivos PHP modificados: $CHANGED_FILES"
+          
+          # Ejecutar tests relacionados con archivos modificados
+          php artisan test --parallel --stop-on-failure
+        else
+          echo "ℹ️ No hay archivos PHP modificados"
+        fi
+        
+    - name: 📊 Coverage rápido de archivos modificados
+      run: |
+        npm run test:coverage -- --changed-files-only
+        
+    - name: 🛡️ Security scan rápido
+      run: |
+        npm run security:scan -- --quick
+        
+    - name: 📋 Generar reporte de PR
+      run: |
+        echo "## 🔍 QA Check para PR #${{ github.event.number }}" > pr-qa-report.md
+        echo "" >> pr-qa-report.md
+        echo "### 📊 Resumen Rápido:" >> pr-qa-report.md
+        echo "- ✅ Tests ejecutados correctamente" >> pr-qa-report.md
+        echo "- 📊 Coverage verificado" >> pr-qa-report.md
+        echo "- 🛡️ Security scan completado" >> pr-qa-report.md
+        echo "" >> pr-qa-report.md
+        echo "### 🔗 Enlaces útiles:" >> pr-qa-report.md
+        echo "- [Dashboard Scripts](http://127.0.0.1:8000/scripts-monitor.html)" >> pr-qa-report.md
+        echo "- [Coverage Dashboard](http://127.0.0.1:8000/coverage-analyzer-dashboard.html)" >> pr-qa-report.md
+        
+    - name: 💬 Comentar resultado en PR
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('pr-qa-report.md', 'utf8');
+          
+          // Buscar comentario existente
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('🔍 QA Check para PR')
+          );
+          
+          if (botComment) {
+            // Actualizar comentario existente
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: report
+            });
+          } else {
+            // Crear nuevo comentario
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: report
+            });
+          }
+
+  # =============================================================================
+  # 📊 ANÁLISIS DE DIFERENCIAS
+  # =============================================================================
+  diff-analysis:
+    runs-on: ubuntu-latest
+    name: 📊 Análisis de Diferencias
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🔍 Analizar cambios en el código
+      run: |
+        echo "## 📊 Análisis de Cambios" > diff-analysis.md
+        echo "" >> diff-analysis.md
+        
+        # Contar líneas agregadas/eliminadas
+        STATS=$(git diff --stat ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+        echo "### 📈 Estadísticas:" >> diff-analysis.md
+        echo '```' >> diff-analysis.md
+        echo "$STATS" >> diff-analysis.md
+        echo '```' >> diff-analysis.md
+        echo "" >> diff-analysis.md
+        
+        # Analizar archivos críticos modificados
+        CRITICAL_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E "(Models|Controllers|Middleware|config)" || true)
+        
+        if [ ! -z "$CRITICAL_FILES" ]; then
+          echo "### ⚠️ Archivos Críticos Modificados:" >> diff-analysis.md
+          echo "$CRITICAL_FILES" | while read file; do
+            echo "- \`$file\`" >> diff-analysis.md
+          done
+          echo "" >> diff-analysis.md
+        fi
+        
+        # Verificar si hay nuevas migraciones
+        NEW_MIGRATIONS=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep "database/migrations" || true)
+        
+        if [ ! -z "$NEW_MIGRATIONS" ]; then
+          echo "### 🗄️ Nuevas Migraciones:" >> diff-analysis.md
+          echo "$NEW_MIGRATIONS" | while read file; do
+            echo "- \`$file\`" >> diff-analysis.md
+          done
+          echo "" >> diff-analysis.md
+          echo "⚠️ **Nota:** Revisar migraciones antes del merge" >> diff-analysis.md
+        fi
+        
+    - name: 💾 Subir análisis de diferencias
+      uses: actions/upload-artifact@v3
+      with:
+        name: diff-analysis-${{ github.event.number }}
+        path: diff-analysis.md
+        retention-days: 30

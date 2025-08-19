@@ -3,7 +3,40 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        
+        "# === MONITOR SCRIPTS NPM DINÁMICOS - QA REAL ===": "#",
+        "test:watch": "node scripts/test-watch.js",
+        "test:coverage": "node scripts/coverage-analyzer-fixed.js",
+        "test:coverage-demo": "node scripts/coverage-analyzer-fixed.js demo",
+        "test:coverage-low": "node scripts/coverage-analyzer-fixed.js low",
+        "test:coverage-high": "node scripts/coverage-analyzer-fixed.js high",
+        "test:coverage-critical": "node scripts/coverage-analyzer-fixed.js critical",
+        "test:coverage-perfect": "node scripts/coverage-analyzer-fixed.js perfect",
+        "test:coverage-old": "node scripts/coverage-analyzer.js",
+        "security:scan": "node scripts/security-scanner.js",
+        "performance:profile": "node scripts/performance-profiler.js",
+        "qa:dynamic": "node scripts/qa-orchestrator.js",
+        
+        "# === SCRIPTS DE SOPORTE ===": "#",
+        "qa:validate": "node scripts/validate-environment.js",
+        "qa:report": "node scripts/generate-report.js",
+        "qa:dashboard": "node scripts/start-dashboard.js",
+        
+        "# === CI/CD OPTIMIZED SCRIPTS ===": "#",
+        "ci:coverage": "node scripts/coverage-analyzer-cicd.js",
+        "ci:coverage-github": "node scripts/coverage-analyzer-cicd.js --output-format=github",
+        "ci:security": "node scripts/security-scanner.js --ci-mode",
+        "ci:qa-full": "npm run ci:coverage && npm run ci:security",
+        "ci:quick-check": "npm run test:coverage -- --quick && npm run security:scan -- --quick",
+        
+        "# === COVERAGE ANALYZER TEST MODES ===": "#",
+        "coverage:test": "node scripts/coverage-analyzer-test.js",
+        "coverage:high": "node scripts/coverage-analyzer-test.js high",
+        "coverage:low": "node scripts/coverage-analyzer-test.js low",
+        "coverage:critical": "node scripts/coverage-analyzer-test.js critical",
+        "coverage:perfect": "node scripts/coverage-analyzer-test.js perfect",
+        "coverage:normal": "node scripts/coverage-analyzer-test.js normal"
     },
     "devDependencies": {
         "axios": "^1.6.4",

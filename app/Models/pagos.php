@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Pago extends Model
+class Pagos extends Model
 {
     use SoftDeletes;
 
@@ -25,6 +25,8 @@ class Pago extends Model
         'estado',
         'id_usuario_registro',
     ];
+
+    
 
     protected $casts = [
         'fecha_pago' => 'date',
