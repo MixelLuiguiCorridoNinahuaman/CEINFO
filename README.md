@@ -140,3 +140,8 @@ npm run ci:qa-full           # QA completo para CI/CD
 🔄 **CI/CD enterprise-grade** con GitHub Actions  
 
 📖 **Documentación completa**: [docs/ci-cd-integration.md](docs/ci-cd-integration.md)
+## Status
+
+[![CI Pipeline](https://github.com/MixelLuiguiCorridoNinahuaman/CEINFO/workflows/CI%20Pipeline/badge.svg)](https://github.com/MixelLuiguiCorridoNinahuaman/CEINFO/actions)
+[![Security Scan](https://github.com/MixelLuiguiCorridoNinahuaman/CEINFO/workflows/Security%20Scan/badge.svg)](https://github.com/MixelLuiguiCorridoNinahuaman/CEINFO/actions)
+[![Quality Check](https://github.com/MixelLuiguiCorridoNinahuaman/CEINFO/workflows/Quality%20Check/badge.svg)](https://github.com/MixelLuiguiCorridoNinahuaman/CEINFO/actions)

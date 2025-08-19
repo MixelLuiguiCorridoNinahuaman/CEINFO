@@ -1,0 +1,17 @@
+CursoHorarioDia
+Carrera
+Docente
+Nivel
+roles
+TipoAlumno
+certificados
+pagos
+CursoHorario
+Curso
+ContratoDocente
+persona
+User
+Estudiante
+mensualidades
+Programa
+Matricula
