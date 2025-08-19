@@ -16,6 +16,11 @@ on:
         - dependencies-only
         - code-only
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 env:
   APP_ENV: testing
 
