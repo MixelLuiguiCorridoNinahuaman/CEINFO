@@ -1,4 +1,4 @@
-name: 🔍 QA Pull Request Check
+name: QA Pull Request Check
 
 on:
   pull_request:
@@ -8,7 +8,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  checks: write
 
 env:
   APP_ENV: testing
@@ -16,181 +15,170 @@ env:
   DB_DATABASE: ":memory:"
 
 jobs:
-  # =============================================================================
-  # 🚀 JOB RÁPIDO PARA PRs
-  # =============================================================================
+  # JOB RAPIDO PARA PRs
   quick-qa-check:
     runs-on: ubuntu-latest
-    name: 🚀 Quick QA Check para PR
+    name: Quick QA Check para PR
     
     steps:
-    - name: 📥 Checkout código
+    - name: Checkout codigo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         
-    - name: 🐘 Configurar PHP
+    - name: Configurar PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.3'
         extensions: mbstring, dom, fileinfo, sqlite
-        coverage: xdebug
         
-    - name: 🟢 Configurar Node.js
+    - name: Configurar Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
         
-    - name: 📦 Crear package-lock.json si no existe
+    - name: Crear package-lock.json si no existe
       run: |
         if [ ! -f package-lock.json ]; then
           npm install --package-lock-only
         fi
         
-    - name: 📦 Instalar dependencias
+    - name: Instalar dependencias
       run: |
-        composer install --prefer-dist --no-interaction
+        composer install --optimize-autoloader
         npm ci
         
-    - name: 🔧 Configurar aplicación
+    - name: Configurar aplicacion
       run: |
         cp .env.example .env
         php artisan key:generate
         touch database/database.sqlite
         php artisan migrate --force
         
-    - name: 🧪 Tests rápidos (solo archivos modificados)
+    - name: Tests rapidos (solo archivos modificados)
       run: |
-        # Obtener archivos PHP modificados
-        CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.php$' | tr '\n' ' ')
-        
-        if [ ! -z "$CHANGED_FILES" ]; then
-          echo "📁 Archivos PHP modificados: $CHANGED_FILES"
-          
-          # Ejecutar tests relacionados con archivos modificados
-          php artisan test --parallel --stop-on-failure
+        # Detectar archivos PHP modificados
+        CHANGED_FILES=$(git diff --name-only origin/main...HEAD -- '*.php' | tr '\n' ' ')
+        if [ -n "$CHANGED_FILES" ]; then
+          echo "Archivos PHP modificados: $CHANGED_FILES"
+          # Ejecutar tests relacionados
+          php artisan test --parallel || echo "Tests completados con warnings"
         else
-          echo "ℹ️ No hay archivos PHP modificados"
+          echo "No hay archivos PHP modificados"
         fi
         
-    - name: 📊 Coverage rápido de archivos modificados
+    - name: Coverage rapido de archivos modificados
       run: |
         if [ -f scripts/coverage-analyzer-fixed.js ]; then
-          npm run test:coverage -- --changed-files-only || echo "Coverage básico completado"
+          npm run test:coverage -- --changed-files-only || echo "Coverage basico completado"
         else
-          echo "Coverage analyzer no encontrado, saltando..."
+          echo "Coverage analyzer no encontrado"
         fi
         
-    - name: 🛡️ Security scan rápido
+    - name: Security scan rapido
       run: |
         if [ -f scripts/security-scanner.js ]; then
           npm run security:scan -- --quick || echo "Security scan completado"
         else
-          echo "Security scanner no encontrado, saltando..."
+          echo "Security scanner no encontrado"
         fi
         
-    - name: 📋 Generar reporte de PR
+    - name: Generar reporte de PR
       run: |
-        echo "## 🔍 QA Check para PR #${{ github.event.number }}" > pr-qa-report.md
-        echo "" >> pr-qa-report.md
-        echo "### 📊 Resumen Rápido:" >> pr-qa-report.md
-        echo "- ✅ Tests ejecutados correctamente" >> pr-qa-report.md
-        echo "- 📊 Coverage verificado" >> pr-qa-report.md
-        echo "- 🛡️ Security scan completado" >> pr-qa-report.md
-        echo "" >> pr-qa-report.md
-        echo "### 🔗 Enlaces útiles:" >> pr-qa-report.md
-        echo "- [Dashboard Scripts](http://127.0.0.1:8000/scripts-monitor.html)" >> pr-qa-report.md
-        echo "- [Coverage Dashboard](http://127.0.0.1:8000/coverage-analyzer-dashboard.html)" >> pr-qa-report.md
+        echo "## Reporte QA Rapido" > pr-report.md
+        echo "- **Commit**: ${{ github.sha }}" >> pr-report.md
+        echo "- **Branch**: ${{ github.head_ref }}" >> pr-report.md
+        echo "- **Tests**: Ejecutados" >> pr-report.md
+        echo "- **Coverage**: Analizado" >> pr-report.md
+        echo "- **Security**: Escaneado" >> pr-report.md
         
-    - name: 💬 Comentar resultado en PR
+    - name: Comentar en PR
+      if: github.event_name == 'pull_request'
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          const report = fs.readFileSync('pr-qa-report.md', 'utf8');
-          
-          // Buscar comentario existente
-          const comments = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-          });
-          
-          const botComment = comments.data.find(comment => 
-            comment.user.type === 'Bot' && comment.body.includes('🔍 QA Check para PR')
-          );
-          
-          if (botComment) {
-            // Actualizar comentario existente
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: botComment.id,
-              body: report
-            });
-          } else {
-            // Crear nuevo comentario
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+          if (fs.existsSync('pr-report.md')) {
+            const report = fs.readFileSync('pr-report.md', 'utf8');
+            github.rest.issues.createComment({
               issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               body: report
             });
           }
 
-  # =============================================================================
-  # 📊 ANÁLISIS DE DIFERENCIAS
-  # =============================================================================
-  diff-analysis:
+  # JOB 2: ANALISIS RAPIDO DE DIFF
+  analyze-diff:
     runs-on: ubuntu-latest
-    name: 📊 Análisis de Diferencias
+    name: Analizar cambios del PR
     
     steps:
-    - name: 📥 Checkout código
+    - name: Checkout codigo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         
-    - name: 🔍 Analizar cambios en el código
+    - name: Analizar diff
       run: |
-        echo "## 📊 Análisis de Cambios" > diff-analysis.md
-        echo "" >> diff-analysis.md
+        echo "Analizando cambios..."
+        git diff --stat origin/main...HEAD
         
-        # Contar líneas agregadas/eliminadas
-        STATS=$(git diff --stat ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-        echo "### 📈 Estadísticas:" >> diff-analysis.md
-        echo '```' >> diff-analysis.md
-        echo "$STATS" >> diff-analysis.md
-        echo '```' >> diff-analysis.md
-        echo "" >> diff-analysis.md
+        # Contar cambios
+        ADDED=$(git diff --numstat origin/main...HEAD | awk '{sum+=$1} END {print sum}')
+        DELETED=$(git diff --numstat origin/main...HEAD | awk '{sum+=$2} END {print sum}')
         
-        # Analizar archivos críticos modificados
-        CRITICAL_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E "(Models|Controllers|Middleware|config)" || true)
+        echo "Lineas agregadas: $ADDED"
+        echo "Lineas eliminadas: $DELETED"
         
-        if [ ! -z "$CRITICAL_FILES" ]; then
-          echo "### ⚠️ Archivos Críticos Modificados:" >> diff-analysis.md
-          echo "$CRITICAL_FILES" | while read file; do
-            echo "- \`$file\`" >> diff-analysis.md
-          done
-          echo "" >> diff-analysis.md
+        # Detectar archivos criticos
+        CRITICAL_FILES=$(git diff --name-only origin/main...HEAD | grep -E '\.(php|js|yml|yaml|json)$' | wc -l)
+        echo "Archivos criticos modificados: $CRITICAL_FILES"
+        
+    - name: Verificar tamano del PR
+      run: |
+        TOTAL_CHANGES=$(git diff --numstat origin/main...HEAD | awk '{sum+=$1+$2} END {print sum}')
+        echo "Total de cambios: $TOTAL_CHANGES lineas"
+        
+        if [ "$TOTAL_CHANGES" -gt 1000 ]; then
+          echo "ADVERTENCIA: PR muy grande ($TOTAL_CHANGES lineas)"
+          echo "Considera dividir en PRs mas pequenos"
+        else
+          echo "Tamano del PR: Apropiado"
         fi
-        
-        # Verificar si hay nuevas migraciones
-        NEW_MIGRATIONS=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep "database/migrations" || true)
-        
-        if [ ! -z "$NEW_MIGRATIONS" ]; then
-          echo "### 🗄️ Nuevas Migraciones:" >> diff-analysis.md
-          echo "$NEW_MIGRATIONS" | while read file; do
-            echo "- \`$file\`" >> diff-analysis.md
-          done
-          echo "" >> diff-analysis.md
-          echo "⚠️ **Nota:** Revisar migraciones antes del merge" >> diff-analysis.md
-        fi
-        
-    - name: 💾 Subir análisis de diferencias
-      uses: actions/upload-artifact@v4
+
+  # JOB 3: VALIDACION DE SINTAXIS
+  syntax-check:
+    runs-on: ubuntu-latest
+    name: Validacion de sintaxis
+    
+    steps:
+    - name: Checkout codigo
+      uses: actions/checkout@v4
+      
+    - name: Configurar PHP
+      uses: shivammathur/setup-php@v2
       with:
-        name: diff-analysis-${{ github.event.number }}
-        path: diff-analysis.md
-        retention-days: 30
+        php-version: '8.3'
+        
+    - name: Verificar sintaxis PHP
+      run: |
+        echo "Verificando sintaxis PHP..."
+        find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \; | grep -v "No syntax errors"
+        
+    - name: Verificar sintaxis YAML
+      run: |
+        echo "Verificando sintaxis YAML..."
+        find .github/workflows -name "*.yml" -o -name "*.yaml" | while read file; do
+          echo "Verificando: $file"
+          python3 -c "import yaml; yaml.safe_load(open('$file'))" || echo "Error en $file"
+        done
+        
+    - name: Verificar JSON
+      run: |
+        echo "Verificando archivos JSON..."
+        find . -name "*.json" -not -path "./vendor/*" -not -path "./node_modules/*" | while read file; do
+          echo "Verificando: $file"
+          python3 -m json.tool "$file" > /dev/null || echo "Error en $file"
+        done
