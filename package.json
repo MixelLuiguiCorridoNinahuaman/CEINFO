@@ -29,6 +29,7 @@
         "ci:security": "node scripts/security-scanner.js --ci-mode",
         "ci:qa-full": "npm run ci:coverage && npm run ci:security",
         "ci:quick-check": "npm run test:coverage -- --quick && npm run security:scan -- --quick",
+        "ci:diagnostics": "node scripts/ci-diagnostics.js",
         
         "# === COVERAGE ANALYZER TEST MODES ===": "#",
         "coverage:test": "node scripts/coverage-analyzer-test.js",
