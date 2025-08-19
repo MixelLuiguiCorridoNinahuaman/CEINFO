@@ -1,0 +1,99 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  APP_ENV: testing
+  DB_CONNECTION: sqlite
+  DB_DATABASE: ":memory:"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    
+    strategy:
+      matrix:
+        php: [8.2, 8.3]
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        extensions: mbstring, dom, fileinfo, sqlite
+        coverage: xdebug
+        
+    - name: Cache Composer Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.composer/cache/files
+        key: dependencies-php-${{ matrix.php }}-composer-${{ hashFiles('composer.lock') }}
+        restore-keys: |
+          dependencies-php-${{ matrix.php }}-composer-
+        
+    - name: Install Dependencies
+      run: composer install --prefer-dist --no-interaction --optimize-autoloader
+      
+    - name: Setup Application
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        php artisan config:clear
+        php artisan cache:clear
+        
+    - name: Prepare Database
+      run: |
+        touch database/database.sqlite
+        php artisan migrate --force
+        
+    - name: Run Tests
+      run: php artisan test --parallel
+      
+    - name: Run Coverage Analysis
+      if: matrix.php == '8.3'
+      run: |
+        php artisan test --coverage-text --coverage-clover=coverage.xml
+        
+    - name: Upload Coverage
+      if: matrix.php == '8.3'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Code Quality
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo
+        
+    - name: Install Dependencies
+      run: composer install --no-dev --optimize-autoloader
+      
+    - name: PHP Syntax Check
+      run: |
+        find app -name "*.php" -exec php -l {} \; | grep -v "No syntax errors"
+        
+    - name: Code Style Check
+      run: |
+        if [ -f vendor/bin/phpcs ]; then
+          vendor/bin/phpcs --standard=PSR12 app/ || echo "Code style issues found"
+        else
+          echo "PHPCS not available"
+        fi

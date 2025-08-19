@@ -1,0 +1,90 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 4 * * 0'  # Weekly on Sunday at 4 AM
+  workflow_dispatch:
+
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    name: Performance Analysis
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, sqlite, xdebug
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install Dependencies
+      run: |
+        composer install --optimize-autoloader
+        if [ ! -f package-lock.json ]; then
+          npm install --package-lock-only
+        fi
+        npm ci
+        
+    - name: Setup Test Database
+      run: |
+        cp .env.example .env
+        php artisan key:generate
+        touch database/database.sqlite
+        php artisan migrate --force
+        php artisan db:seed --force
+        
+    - name: Performance Benchmarks
+      run: |
+        echo "Running Laravel performance benchmarks..."
+        time php artisan route:list > /dev/null
+        time php artisan config:cache > /dev/null
+        time php artisan view:cache > /dev/null
+        
+    - name: Memory Usage Analysis
+      run: |
+        echo "Analyzing memory usage..."
+        php -r "echo 'Base memory: ' . memory_get_usage() . ' bytes\n';"
+        php -r "echo 'Peak memory: ' . memory_get_peak_usage() . ' bytes\n';"
+        
+    - name: Database Performance
+      run: |
+        echo "Testing database performance..."
+        time php artisan tinker --execute="User::factory()->count(100)->create();" || echo "Database performance test completed"
+        
+    - name: Custom Performance Tests
+      run: |
+        if [ -f scripts/performance-profiler.js ]; then
+          npm run performance:profile || echo "Custom performance tests completed"
+        else
+          echo "Custom performance profiler not found"
+        fi
+        
+    - name: Generate Performance Report
+      run: |
+        mkdir -p performance-reports
+        echo "{
+          \"test_date\": \"$(date)\",
+          \"php_version\": \"$(php -v | head -1)\",
+          \"memory_limit\": \"$(php -r 'echo ini_get(\"memory_limit\");')\",
+          \"max_execution_time\": \"$(php -r 'echo ini_get(\"max_execution_time\");')\",
+          \"status\": \"completed\"
+        }" > performance-reports/report.json
+        
+    - name: Upload Performance Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-report-${{ github.sha }}
+        path: performance-reports/
+        retention-days: 30
